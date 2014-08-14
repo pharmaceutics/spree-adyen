@@ -205,17 +205,17 @@ module Spree
         end
 
         def create_profile_on_card(payment, card)
-          unless payment.source.gateway_customer_profile_id.present?
+          # Only create profile if profile doesn't exist and payment has been authorised (is pending)
+          if payment.source.gateway_customer_profile_id.blank? && payment.pending?
 
             shopper = { :reference => (payment.order.user_id.present? ? payment.order.user_id : payment.order.email),
                         :email => payment.order.email,
                         :ip => payment.order.last_ip_address,
                         :statement => "Order # #{payment.order.number}" }
 
-            amount = build_amount_on_profile_creation payment
-            options = build_authorise_details payment
+            fetch_and_update_contract payment.source, shopper[:reference]
 
-            response = provider.authorise_payment payment.order.number, amount, shopper, card, options
+            true
 
             if response.success?
               if payment.source.last_digits.blank?
@@ -245,6 +245,7 @@ module Spree
             end
 
             response
+
           end
         end
 
@@ -254,6 +255,12 @@ module Spree
           raise RecurringDetailsNotFoundError unless list.details.present?
           card = list.details.find { |c| c[:card][:number] == source.last_digits }
           raise RecurringDetailsNotFoundError unless card.present?
+
+          # binding.pry
+
+          card = list.details.find {|card| card[:card][:number] == source.last_digits }
+
+          Exception.new('No profile for card') if card.nil?
 
           source.update_columns(
             month: card[:card][:expiry_date].month,
