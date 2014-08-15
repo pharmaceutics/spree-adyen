@@ -256,11 +256,10 @@ module Spree
           card = list.details.find { |c| c[:card][:number] == source.last_digits }
           raise RecurringDetailsNotFoundError unless card.present?
 
-          # binding.pry
+          
+          card = list.details.find { |c| c[:card][:number] == source.last_digits }          
 
-          card = list.details.find {|card| card[:card][:number] == source.last_digits }
-
-          Exception.new('No profile for card') if card.nil?
+          raise Exception.new('No profile for card') if card.nil?
 
           source.update_columns(
             month: card[:card][:expiry_date].month,

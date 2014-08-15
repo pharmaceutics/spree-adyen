@@ -13,10 +13,11 @@ module Spree
     end
 
     def payment_profiles_supported?
-      true
+      false
     end
 
     def authorize(amount, source, gateway_options = {})
+
       card = { encrypted: { json: source.encrypted_data } }
 
       # TODO: Make me conditional. Recurring must be true if payment profiles supported
@@ -33,9 +34,8 @@ module Spree
         source.last_digits = last_digits
       end
 
-      # binding.pry
-
       response
+
     end
 
     # Do a symbolic authorization, e.g. 1 dollar, so that we can grab a recurring token
