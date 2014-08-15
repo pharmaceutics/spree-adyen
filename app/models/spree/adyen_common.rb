@@ -29,7 +29,7 @@ module Spree
       # NOTE Override this with your custom logic for scenarios where you don't
       # want to redirect customer to 3D Secure auth
       def require_3d_secure?(payment)
-        true
+        false
       end
 
       # Receives a source object (e.g. CreditCard) and a shopper hash
