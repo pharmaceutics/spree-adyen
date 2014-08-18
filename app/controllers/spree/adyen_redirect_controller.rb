@@ -5,30 +5,27 @@ module Spree
     skip_before_filter :verify_authenticity_token
 
     def confirm
-      order = current_order
 
-      unless authorized?
-        flash.notice = Spree.t(:payment_processing_failed)
-        redirect_to checkout_state_path(order.state) and return
-      end
+      @payment = current_order.payments.find_by_identifier(extract_merchant_reference_from_params)
+      @payment.response_code = params[:pspReference]
 
-      # cant set payment to complete here due to a validation
-      # in order transition from payment to complete (it requires at
-      # least one pending payment)
-      payment = order.payments.create!(
-        :amount => order.total,
-        :payment_method => payment_method,
-        :response_code => params[:pspReference]
-      )
-
-      order.next
-
-      if order.complete?
-        flash.notice = Spree.t(:order_processed_successfully)
-        redirect_to order_path(order, :token => order.guest_token)
+      if authorized?
+        @payment.pend
+        @payment.save
+      elsif pending?
+        # Leave in payment in processing state and wait for update from Notification
+        @payment.save
       else
-        redirect_to checkout_state_path(order.state)
+        @payment.failure
+        @payment.save
+
+        flash.notice = Spree.t(:payment_processing_failed)
+        redirect_to checkout_state_path(current_order.state) and return      
       end
+
+      current_order.next
+
+      redirect_to_checkout
     end
 
     def authorise3d
@@ -97,8 +94,25 @@ module Spree
 
     private
 
+      def pending?
+        params[:authResult] == 'PENDING'
+      end
+
+      def extract_merchant_reference_from_params
+        params[:merchantReference].split('-').last
+      end
+
       def authorized?
         params[:authResult] == "AUTHORISED"
+      end
+
+      def redirect_to_checkout
+        if current_order.complete?
+          flash.notice = Spree.t(:order_processed_successfully)
+          redirect_to order_path(current_order, :token => current_order.guest_token) and return
+        else
+          redirect_to checkout_state_path(current_order.state) and return
+        end
       end
 
       def check_signature
