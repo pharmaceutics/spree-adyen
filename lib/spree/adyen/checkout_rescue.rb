@@ -33,7 +33,7 @@ module Spree
             brandCode:          exception.source.brand_code
           }
           
-          redirect_params[:resURL] = adyen_confirmation_url if Rails.env.development? || Rails.env.test?
+          redirect_params[:resURL] = adyen_confirmation_url
 
           # TODO: For completeness offer configuration to render a view that will auto POST this information rather than a GET request
           redirect_to ::Adyen::Form.redirect_url(@redirect_params.merge(redirect_params))
