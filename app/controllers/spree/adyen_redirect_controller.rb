@@ -6,7 +6,7 @@ module Spree
 
     def confirm
 
-      @payment = current_order.payments.find_by_identifier(extract_merchant_reference_from_params)
+      @payment = current_order.payments.find_by_identifier(extract_payment_identifier_from_merchant_reference(params[:merchantReference]))
       @payment.response_code = params[:pspReference]
 
       if authorized?
@@ -25,11 +25,11 @@ module Spree
 
       current_order.next
 
-      redirect_to_checkout
+      redirect_to redirect_path and return
     end
 
+
     def authorise3d
-      order = current_order
 
       if params[:MD].present? && params[:PaRes].present?
         md = params[:MD]
@@ -40,56 +40,26 @@ module Spree
 
         response3d = gateway.authorise3d(md, pa_response, request.ip, request.headers.env)
 
+        @payment = current_order.payments.find_by_identifier(session[:payment_identifier])
+        @payment.response_code = response3d.psp_reference
+
         if response3d.success?
-          payment = order.payments.create!(
-            :amount => order.total,
-            :payment_method => gateway,
-            :response_code => response3d.psp_reference
-          )
-
-          list = gateway.provider.list_recurring_details(order.user_id.present? ? order.user_id : order.email)
-
-          if list.details && list.details.empty?
-            flash.notice = "Could not find any recurring details"
-            redirect_to checkout_state_path(order.state) and return
-          else
-            credit_card = Spree::CreditCard.create! do |cc|
-              cc.month = list.details.last[:card][:expiry_date].month
-              cc.year = list.details.last[:card][:expiry_date].year
-              cc.name = list.details.last[:card][:holder_name]
-              cc.cc_type = list.details.last[:variant]
-              cc.last_digits = list.details.last[:card][:number]
-              cc.gateway_customer_profile_id = list.details.last[:recurring_detail_reference]
-            end
-          end
-
-          # Avoid this payment from being processed and so authorised again
-          # once the order transitions to complete state.
-          # See Spree::Order::Checkout for transition events
-          payment.started_processing!
-
-          # We want to avoid callbacks such as Payment#create_payment_profile on after_save
-          payment.update_columns source_id: credit_card.id, source_type: credit_card.class.name
-
-          order.next
-
-          if order.complete?
-            flash.notice = Spree.t(:order_processed_successfully)
-            redirect_to order_path(order, :token => order.guest_token)
-          else
-            if order.errors.any?
-              flash.notice = order.errors.full_messages.inspect
-            end
-
-            redirect_to checkout_state_path(order.state)
-          end
+          @payment.pend
+          @payment.save
+          current_order.next
         else
-          flash.notice = response3d.error.inspect
-          redirect_to checkout_state_path(order.state)
+          @payment.failure
+          @payment.save
+          flash.notice = Spree.t(:payment_processing_failed)
         end
-      else
-        redirect_to checkout_state_path(order.state)
+
       end
+
+      # Update iframe and redirect parent to checkout state
+      render partial: 'spree/shared/reload_parent', locals: {
+        new_url: redirect_path
+      }
+
     end
 
     private
@@ -98,20 +68,20 @@ module Spree
         params[:authResult] == 'PENDING'
       end
 
-      def extract_merchant_reference_from_params
-        params[:merchantReference].split('-').last
+      def extract_payment_identifier_from_merchant_reference(merchant_reference)
+        merchant_reference.split('-').last
       end
 
       def authorized?
         params[:authResult] == "AUTHORISED"
       end
 
-      def redirect_to_checkout
+      def redirect_path
         if current_order.complete?
           flash.notice = Spree.t(:order_processed_successfully)
-          redirect_to order_path(current_order, :token => current_order.guest_token) and return
+          order_path(current_order, :token => current_order.guest_token)
         else
-          redirect_to checkout_state_path(current_order.state) and return
+          checkout_state_path(current_order.state)
         end
       end
 

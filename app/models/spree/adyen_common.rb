@@ -28,8 +28,8 @@ module Spree
 
       # NOTE Override this with your custom logic for scenarios where you don't
       # want to redirect customer to 3D Secure auth
-      def require_3d_secure?(payment)
-        false
+      def require_3d_secure?(amount, source, gateway_options)
+        true
       end
 
       # Receives a source object (e.g. CreditCard) and a shopper hash
@@ -110,12 +110,12 @@ module Spree
         provider.authorise3d_payment(md, pa_response, ip, browser_info)
       end
 
-      def build_authorise_details(payment)
-        if payment.request_env.is_a?(Hash) && require_3d_secure?(payment)
+      def build_authorise_options(amount, source, gateway_options)
+        if gateway_options[:request_env].is_a?(Hash) && require_3d_secure?(amount, source, gateway_options)
           {
             browser_info: {
-              accept_header: payment.request_env['HTTP_ACCEPT'],
-              user_agent: payment.request_env['HTTP_USER_AGENT']
+              accept_header: gateway_options[:request_env]['HTTP_ACCEPT'],
+              user_agent: gateway_options[:request_env]['HTTP_USER_AGENT']
             },
             recurring: true
           }
@@ -158,6 +158,8 @@ module Spree
         def authorize_on_card(amount, source, gateway_options, card, options = { recurring: false })
           reference = gateway_options[:order_id]
 
+          options = build_authorise_options(amount, source, gateway_options)
+
           amount = { currency: gateway_options[:currency], value: amount }
 
           shopper_reference = if gateway_options[:customer_id].present?
@@ -172,6 +174,8 @@ module Spree
                       :statement => "Order # #{gateway_options[:order_id]}" }
 
           response = decide_and_authorise reference, amount, shopper, source, card, options
+
+          raise Adyen::Enrolled3DError.new(response, self, gateway_options) if response.respond_to?(:enrolled_3d?) && response.enrolled_3d?
 
           # Needed to make the response object talk nicely with Spree payment/processing api
           if response.success?

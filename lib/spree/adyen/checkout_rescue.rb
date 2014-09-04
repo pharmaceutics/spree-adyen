@@ -9,6 +9,7 @@ module Spree
         def rescue_from_adyen_3d_enrolled(exception)
           session[:adyen_gateway_id] = exception.gateway.id
           session[:adyen_gateway_name] = exception.gateway.class.name
+          session[:payment_identifier] = exception.gateway_options[:payment_identifier]
 
           @adyen_3d_response = exception
           render 'spree/checkout/adyen_3d_form'
