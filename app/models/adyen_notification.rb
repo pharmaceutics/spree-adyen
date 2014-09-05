@@ -37,13 +37,14 @@ class AdyenNotification < ActiveRecord::Base
   # @raise This method will raise an exception if the notification cannot be stored.
   # @see Adyen::Notification::HttpPost.log
   def self.log(params)
+
     converted_params = {}
 
     # Assign explicit each attribute from CamelCase notation to notification
     # For example, merchantReference will be converted to merchant_reference
     self.new.tap do |notification|
       params.each do |key, value|
-        setter = "#{key.to_s.underscore}="
+        setter = "#{key.to_s.gsub('.', '_').underscore}="
         notification.send(setter, value) if notification.respond_to?(setter)
       end
       notification.save!
@@ -75,8 +76,13 @@ class AdyenNotification < ActiveRecord::Base
 
 # Invalidate payments that doesnt receive a successful notification
   def handle!
+
     if (authorisation? || capture?)
+
       payment = Spree::Payment.find_by(response_code: psp_reference)
+
+      store_profile_from_alias payment if payment.present?
+
       return unless payment && payment.processing?
 
       if success? && capture_available?
@@ -87,6 +93,10 @@ class AdyenNotification < ActiveRecord::Base
         payment.failure
       end
     end
+  end
+
+  def store_profile_from_alias(payment)
+    payment.source.update_attribute :gateway_customer_profile_id, additional_data_alias
   end
   
   def capture_available?

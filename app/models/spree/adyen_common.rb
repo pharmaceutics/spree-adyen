@@ -4,6 +4,7 @@ module Spree
 
     class RecurringDetailsNotFoundError < StandardError; end
     class MissingCardSummaryError < StandardError; end
+    class MissingAliasError < StandardError; end
 
     included do
       preference :api_username, :string
@@ -201,27 +202,33 @@ module Spree
 
           if require_one_click_payment?(source, shopper) && recurring_detail_reference.present?
             provider.authorise_one_click_payment reference, amount, shopper, card_cvc, recurring_detail_reference
-          elsif source.gateway_customer_profile_id.present?
-            provider.authorise_recurring_payment reference, amount, shopper, source.gateway_customer_profile_id
+          elsif recurring_detail_reference.present?
+            provider.authorise_recurring_payment reference, amount, shopper, recurring_detail_reference
           else
             provider.authorise_payment reference, amount, shopper, card, options
           end
         end
 
         def create_profile_on_card(payment, card)
-          # Only create profile if profile doesn't exist and payment has been authorised (is pending)
-          if payment.source.gateway_customer_profile_id.blank? && payment.pending?
+          unless payment.source.gateway_customer_profile_id.present?
 
             shopper = { :reference => (payment.order.user_id.present? ? payment.order.user_id : payment.order.email),
                         :email => payment.order.email,
                         :ip => payment.order.last_ip_address,
                         :statement => "Order # #{payment.order.number}" }
 
-            fetch_and_update_contract payment.source, shopper[:reference]
+            # Auth for 0. Adyen will automatically update this to 1 if 0 not supported by Issuer
+            amount = 0
 
-            true
+            # Still build options as payment may requre 3D Secure
+            options = build_authorise_details payment.gateway_options
+
+            response = provider.authorise_payment payment.gateway_options[:order_id], amount, shopper, card, options
 
             if response.success?
+
+              store_profile_from_alias(payment, response)
+
               if payment.source.last_digits.blank?
                 last_digits = response.additional_data["cardSummary"]
                 if last_digits.blank? && payment_profiles_supported?
@@ -229,16 +236,8 @@ module Spree
                           Please request last digits to be sent back to support payment profiles"
                   raise Adyen::MissingCardSummaryError, note
                 end
-
                 payment.source.last_digits = last_digits
               end
-
-              fetch_and_update_contract payment.source, shopper[:reference]
-
-              # Avoid this payment from being processed and so authorised again
-              # once the order transitions to complete state.
-              # See Spree::Order::Checkout for transition events
-              payment.started_processing!
 
             elsif response.respond_to?(:enrolled_3d?) && response.enrolled_3d?
               raise Adyen::Enrolled3DError.new(response, payment.payment_method)
@@ -249,8 +248,17 @@ module Spree
             end
 
             response
-
           end
+        end
+
+        def store_profile_from_alias(payment, response)
+          customer_profile_id = response.additional_data["alias"]
+          if customer_profile_id.blank? && payment_profiles_supported?
+            note = "Payment was authorized but could not fetch alias (customer_profile_id).
+                    Please request alias to be sent back to support payment profiles"
+            raise Adyen::MissingAliasError, note
+          end
+          payment.source.update_attribute :gateway_customer_profile_id, response.additional_data["alias"]
         end
 
         def fetch_and_update_contract(source, shopper_reference)
@@ -259,11 +267,6 @@ module Spree
           raise RecurringDetailsNotFoundError unless list.details.present?
           card = list.details.find { |c| c[:card][:number] == source.last_digits }
           raise RecurringDetailsNotFoundError unless card.present?
-
-          
-          card = list.details.find { |c| c[:card][:number] == source.last_digits }          
-
-          raise Exception.new('No profile for card') if card.nil?
 
           source.update_columns(
             month: card[:card][:expiry_date].month,
@@ -274,6 +277,7 @@ module Spree
             gateway_customer_profile_id: card[:recurring_detail_reference]
           )
         end
+
     end
 
     module ClassMethods
