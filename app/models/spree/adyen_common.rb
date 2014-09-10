@@ -43,7 +43,7 @@ module Spree
         response = provider.capture_payment(response_code, value)
 
         if response.success?
-          def response.authorization; psp_reference; end
+          def response.authorization; nil; end
           def response.avs_result; {}; end
           def response.cvv_result; {}; end
         else
@@ -63,7 +63,7 @@ module Spree
         response = provider.cancel_payment(response_code)
 
         if response.success?
-          def response.authorization; psp_reference; end
+          def response.authorization; nil; end
         else
           # TODO confirm the error response will always have these two methods
           def response.to_s
@@ -78,7 +78,7 @@ module Spree
         response = provider.refund_payment response_code, amount
 
         if response.success?
-          def response.authorization; psp_reference; end
+          def response.authorization; nil; end
         else
           def response.to_s
             refusal_reason
