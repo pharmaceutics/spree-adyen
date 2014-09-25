@@ -77,14 +77,21 @@ module Spree
       end
 
       def redirect_path
-        if current_order.complete?
+        if current_order.completed?
+          flash[:completed_order] = current_order.id
+          @current_order = nil
           flash.notice = Spree.t(:order_processed_successfully)
-          order_path(current_order, :token => current_order.guest_token)
+          flash[:order_completed] = true
+          completion_route
         else
           checkout_state_path(current_order.state)
         end
       end
 
+      def completion_route
+        spree.checkout_complete_path
+      end
+      
       def check_signature
         unless ::Adyen::Form.redirect_signature_check(params, payment_method.shared_secret)
           raise "Payment Method not found."
