@@ -78,10 +78,9 @@ module Spree
 
       def redirect_path
         if current_order.completed?
-          flash[:completed_order] = current_order.id
+          cookies[:completed_order] = current_order.id
           @current_order = nil
           flash.notice = Spree.t(:order_processed_successfully)
-          flash[:order_completed] = true
           completion_route
         else
           checkout_state_path(current_order.state)
