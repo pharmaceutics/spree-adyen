@@ -20,7 +20,7 @@ module Spree
         @payment.save
 
         flash.notice = Spree.t(:payment_processing_failed)
-        redirect_to checkout_state_path(current_order.state) and return      
+        redirect_to checkout_state_path(current_order.state) and return
       end
 
       current_order.next
@@ -90,7 +90,7 @@ module Spree
       def completion_route
         spree.checkout_complete_path
       end
-      
+
       def check_signature
         unless ::Adyen::Form.redirect_signature_check(params, payment_method.shared_secret)
           raise "Payment Method not found."
@@ -100,7 +100,9 @@ module Spree
       # TODO find a way to send the payment method id to Adyen servers and get
       # it back here to make sure we find the right payment method
       def payment_method
-        @payment_method ||= Gateway::AdyenHPP.last # find(params[:merchantReturnData])
+        @payment_method = current_order.available_payment_methods.find do |m|
+                            m.is_a?(Spree::Gateway::AdyenHPP) && m.environment == Rails.env
+                          end
       end
 
   end
