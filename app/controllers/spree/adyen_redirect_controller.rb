@@ -101,7 +101,7 @@ module Spree
       # it back here to make sure we find the right payment method
       def payment_method
         @payment_method = current_order.available_payment_methods.find do |m|
-                            m.is_a?(Spree::Gateway::AdyenHPP) && m.environment == Rails.env
+                            m.is_a?(Spree::Gateway::AdyenHPP)
                           end
       end
 
