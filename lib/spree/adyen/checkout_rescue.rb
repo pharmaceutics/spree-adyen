@@ -9,7 +9,7 @@ module Spree
         def rescue_from_adyen_3d_enrolled(exception)
           session[:adyen_gateway_id] = exception.gateway.id
           session[:adyen_gateway_name] = exception.gateway.class.name
-          session[:payment_identifier] = exception.gateway_options[:payment_identifier]
+          session[:payment_number] = exception.gateway_options[:payment_number]
 
           @adyen_3d_response = exception
           render 'spree/checkout/adyen_3d_form'
@@ -26,7 +26,7 @@ module Spree
             ship_before_date:   Date.tomorrow,
             session_validity:   10.minutes.from_now,
             recurring:          false,
-            merchant_reference: "#{payment.order.number}-#{payment.identifier}",
+            merchant_reference: "#{payment.order.number}-#{payment.number}",
             merchant_account:   exception.source.payment_method.merchant_account,
             skin_code:          exception.source.payment_method.skin_code,
             shared_secret:      exception.source.payment_method.shared_secret,

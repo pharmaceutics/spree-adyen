@@ -6,7 +6,7 @@ module Spree
 
     def confirm
 
-      @payment = current_order.payments.find_by_identifier(extract_payment_identifier_from_merchant_reference(params[:merchantReference]))
+      @payment = current_order.payments.find_by_number(extract_payment_number_from_merchant_reference(params[:merchantReference]))
       @payment.response_code = params[:pspReference]
 
       if authorized?
@@ -40,7 +40,7 @@ module Spree
 
         response3d = gateway.authorise3d(md, pa_response, request.ip, request.headers.env)
 
-        @payment = current_order.payments.find_by_identifier(session[:payment_identifier])
+        @payment = current_order.payments.find_by_number(session[:payment_number])
         @payment.response_code = response3d.psp_reference
 
         if response3d.success?
@@ -68,7 +68,7 @@ module Spree
         params[:authResult] == 'PENDING'
       end
 
-      def extract_payment_identifier_from_merchant_reference(merchant_reference)
+      def extract_payment_number_from_merchant_reference(merchant_reference)
         merchant_reference.split('-').last
       end
 
