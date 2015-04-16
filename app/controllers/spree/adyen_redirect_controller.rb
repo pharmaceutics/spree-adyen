@@ -19,7 +19,7 @@ module Spree
         @payment.failure
         @payment.save
 
-        flash.notice = Spree.t(:payment_processing_failed)
+        flash.notice = Spree.t('payment_messages.processing_failed')
         redirect_to checkout_state_path(current_order.state) and return
       end
 
@@ -50,7 +50,7 @@ module Spree
         else
           @payment.failure
           @payment.save
-          flash.notice = Spree.t(:payment_processing_failed)
+          flash.notice = Spree.t('payment_messages.processing_failed')
         end
 
       end
