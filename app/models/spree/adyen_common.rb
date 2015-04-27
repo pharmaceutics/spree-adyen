@@ -96,7 +96,7 @@ module Spree
         else
           logger.error(Spree.t(:gateway_error))
           logger.error("  #{response.to_yaml}")
-          raise Core::GatewayError.new(response.fault_message || response.refusal_reason)
+          raise Core::GatewayError.new('payment_messages.generic_error')
         end
       end
 
@@ -197,7 +197,7 @@ module Spree
           card_cvc = source.verification_value
 
           if card_cvc.blank? && require_one_click_payment?(source, shopper)
-            raise Core::GatewayError.new("You need to enter the card verificationv value")
+            raise Core::GatewayError.new('payment_messages.card_verification_value')
           end
 
           if require_one_click_payment?(source, shopper) && recurring_detail_reference.present?
@@ -244,7 +244,7 @@ module Spree
             else
               logger.error(Spree.t(:gateway_error))
               logger.error("  #{response.to_yaml}")
-              raise Core::GatewayError.new(response.fault_message || response.refusal_reason)
+              raise Core::GatewayError.new('payment_messages.generic_error')
             end
 
             response
