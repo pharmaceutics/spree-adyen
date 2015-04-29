@@ -35,7 +35,7 @@ module Spree
 
       # Receives a source object (e.g. CreditCard) and a shopper hash
       def require_one_click_payment?(source, shopper)
-        false
+        true
       end
 
       def capture(amount, response_code, gateway_options = {})
@@ -196,11 +196,8 @@ module Spree
           recurring_detail_reference = source.gateway_customer_profile_id
           card_cvc = source.verification_value
 
-          if card_cvc.blank? && require_one_click_payment?(source, shopper)
-            raise Core::GatewayError.new('payment_messages.card_verification_value')
-          end
-
           if require_one_click_payment?(source, shopper) && recurring_detail_reference.present?
+            raise Core::GatewayError.new('payment_messages.card_verification_value')  if card_cvc.blank?
             provider.authorise_one_click_payment reference, amount, shopper, card_cvc, recurring_detail_reference
           elsif recurring_detail_reference.present?
             provider.authorise_recurring_payment reference, amount, shopper, recurring_detail_reference
