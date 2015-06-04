@@ -79,7 +79,7 @@ class AdyenNotification < ActiveRecord::Base
 
     if (authorisation? || capture?)
 
-      payment = Spree::Payment.find_by(response_code: psp_reference)
+      payment = Spree::Payment.find_by(number: payment_number)
 
       store_profile_from_alias payment if payment.present?
 
@@ -102,4 +102,10 @@ class AdyenNotification < ActiveRecord::Base
   def capture_available?
     !!operations['CAPTURE']
   end
+
+  private
+
+    def payment_number
+      @payment_number ||= merchant_reference.split('-').last
+    end
 end
