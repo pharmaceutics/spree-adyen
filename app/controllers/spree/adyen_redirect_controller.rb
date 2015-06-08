@@ -5,9 +5,10 @@ module Spree
     skip_before_filter :verify_authenticity_token
 
     def confirm
-
-      @payment = current_order.payments.find_by_number(extract_payment_number_from_merchant_reference(params[:merchantReference]))
+      payment_number = extract_payment_number_from_merchant_reference(params[:merchantReference])
+      @payment = Spree::Payment.find_by_number(payment_number)
       @payment.response_code = params[:pspReference]
+      @payment_order = @payment.order
 
       if authorized?
         @payment.pend
@@ -20,10 +21,10 @@ module Spree
         @payment.save
 
         flash.notice = Spree.t('payment_messages.processing_failed')
-        redirect_to checkout_state_path(current_order.state) and return
+        redirect_to checkout_state_path(@payment_order.state) and return
       end
 
-      current_order.next
+      @payment_order.next
 
       redirect_to redirect_path and return
     end
@@ -40,13 +41,14 @@ module Spree
 
         response3d = gateway.authorise3d(md, pa_response, request.ip, request.headers.env)
 
-        @payment = current_order.payments.find_by_number(session[:payment_number])
+        @payment = Spree::Payment.find_by_number(session[:payment_number])
         @payment.response_code = response3d.psp_reference
+        @payment_order = @payment.order
 
         if response3d.success?
           @payment.pend
           @payment.save
-          current_order.next
+          @payment_order.next
         else
           @payment.failure
           @payment.save
@@ -77,13 +79,13 @@ module Spree
       end
 
       def redirect_path
-        if current_order.completed?
-          cookies[:completed_order] = current_order.id
-          @current_order = nil
+        if @payment_order.completed?
+          cookies[:completed_order] = @payment_order.id
+          @current_order = @payment_order = nil
           flash.notice = Spree.t(:order_processed_successfully)
           completion_route
         else
-          checkout_state_path(current_order.state)
+          checkout_state_path(@payment_order.state)
         end
       end
 
