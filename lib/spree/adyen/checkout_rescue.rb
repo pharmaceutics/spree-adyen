@@ -18,22 +18,23 @@ module Spree
         rescue_from Adyen::HPPRedirectError, :with => :rescue_from_adyen_hpp_redirect
 
         def rescue_from_adyen_hpp_redirect(exception)
-      
+
           payment = exception.source.payments.processing.last
+          @payment_order = payment.order
 
           redirect_params = {
-            currency_code:      current_order.currency,
+            currency_code:      @payment_order.currency,
             ship_before_date:   Date.tomorrow,
             session_validity:   10.minutes.from_now,
             recurring:          false,
-            merchant_reference: "#{payment.order.number}-#{payment.number}",
+            merchant_reference: "#{@payment_order.number}-#{payment.number}",
             merchant_account:   exception.source.payment_method.merchant_account,
             skin_code:          exception.source.payment_method.skin_code,
             shared_secret:      exception.source.payment_method.shared_secret,
-            payment_amount:     (payment.order.total.to_f * 100).to_int,  
+            payment_amount:     (@payment_order.total.to_f * 100).to_int,
             brandCode:          exception.source.brand_code
           }
-          
+
           redirect_params[:resURL] = adyen_confirmation_url
 
           # TODO: For completeness offer configuration to render a view that will auto POST this information rather than a GET request
