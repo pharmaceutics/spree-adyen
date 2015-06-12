@@ -36,12 +36,15 @@ module Spree
         md = params[:MD]
         pa_response = params[:PaRes]
 
-        gateway_class = session[:adyen_gateway_name].constantize
-        gateway = gateway_class.find(session[:adyen_gateway_id])
+        gateway_class = cookies.signed[:adyen_gateway_name].constantize
+        cookies.delete(:adyen_gateway_name)
+        gateway = gateway_class.find(cookies.signed[:adyen_gateway_id])
+        cookies.delete(:adyen_gateway_id)
 
         response3d = gateway.authorise3d(md, pa_response, request.ip, request.headers.env)
 
-        @payment = Spree::Payment.find_by_number(session[:payment_number])
+        @payment = Spree::Payment.find_by_number(cookies.signed[:payment_number])
+        cookies.delete(:payment_number)
         @payment.response_code = response3d.psp_reference
         @payment_order = @payment.order
 
