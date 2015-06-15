@@ -105,7 +105,7 @@ module Spree
       # TODO find a way to send the payment method id to Adyen servers and get
       # it back here to make sure we find the right payment method
       def payment_method
-        @payment_method = current_order.available_payment_methods.find do |m|
+        @payment_method ||= Spree::PaymentMethod.available(:both, current_store).find do |m|
                             m.is_a?(Spree::Gateway::AdyenHPP)
                           end
       end
