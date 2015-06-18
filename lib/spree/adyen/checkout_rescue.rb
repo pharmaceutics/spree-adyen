@@ -31,7 +31,7 @@ module Spree
             merchant_account:   exception.source.payment_method.merchant_account,
             skin_code:          exception.source.payment_method.skin_code,
             shared_secret:      exception.source.payment_method.shared_secret,
-            payment_amount:     (@payment_order.total.to_f * 100).to_int,
+            payment_amount:     (payment.amount.to_f * 100).to_int,
             brandCode:          exception.source.brand_code
           }
 
