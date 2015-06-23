@@ -7,9 +7,15 @@ module Spree
         rescue_from Adyen::Enrolled3DError, :with => :rescue_from_adyen_3d_enrolled
 
         def rescue_from_adyen_3d_enrolled(exception)
-          cookies.permanent.signed[:adyen_gateway_id]   = exception.gateway.id
-          cookies.permanent.signed[:adyen_gateway_name] = exception.gateway.class.name
-          cookies.permanent.signed[:payment_number]     = exception.gateway_options[:payment_number]
+          cookies.signed[:adyen_gateway_id]   = { value: exception.gateway.id,
+                                                  expires: 1.hour.from_now
+                                                  secure: true }
+          cookies.signed[:adyen_gateway_name] = { value: exception.gateway.class.name,
+                                                  expires: 1.hour.from_now
+                                                  secure: true }
+          cookies.signed[:payment_number]     = { value: exception.gateway_options[:payment_number],
+                                                  expires: 1.hour.from_now
+                                                  secure: true }
 
           @adyen_3d_response = exception
           render 'spree/checkout/adyen_3d_form'
