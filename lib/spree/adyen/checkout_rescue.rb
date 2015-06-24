@@ -8,13 +8,13 @@ module Spree
 
         def rescue_from_adyen_3d_enrolled(exception)
           cookies.signed[:adyen_gateway_id]   = { value: exception.gateway.id,
-                                                  expires: 1.hour.from_now
+                                                  expires: 1.hour.from_now,
                                                   secure: true }
           cookies.signed[:adyen_gateway_name] = { value: exception.gateway.class.name,
-                                                  expires: 1.hour.from_now
+                                                  expires: 1.hour.from_now,
                                                   secure: true }
           cookies.signed[:payment_number]     = { value: exception.gateway_options[:payment_number],
-                                                  expires: 1.hour.from_now
+                                                  expires: 1.hour.from_now,
                                                   secure: true }
 
           @adyen_3d_response = exception
