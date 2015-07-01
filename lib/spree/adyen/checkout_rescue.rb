@@ -7,17 +7,9 @@ module Spree
         rescue_from Adyen::Enrolled3DError, :with => :rescue_from_adyen_3d_enrolled
 
         def rescue_from_adyen_3d_enrolled(exception)
-          cookies.signed[:adyen_gateway_id]   = { value: exception.gateway.id,
-                                                  expires: 1.hour.from_now,
-                                                  secure: true }
-          cookies.signed[:adyen_gateway_name] = { value: exception.gateway.class.name,
-                                                  expires: 1.hour.from_now,
-                                                  secure: true }
-          cookies.signed[:payment_number]     = { value: exception.gateway_options[:payment_number],
-                                                  expires: 1.hour.from_now,
-                                                  secure: true }
-
-          @adyen_3d_response = exception
+          @adyen_3d_response  = exception
+          crypt = ActiveSupport::MessageEncryptor.new(Rails.application.secrets.secret_key_base)
+          @enc_payment_number = crypt.encrypt_and_sign(exception.gateway_options[:payment_number])
           render 'spree/checkout/adyen_3d_form'
         end
 

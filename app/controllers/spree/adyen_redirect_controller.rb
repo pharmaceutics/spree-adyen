@@ -31,19 +31,18 @@ module Spree
 
 
     def authorise3d
-
-      if params[:MD].present? && params[:PaRes].present?
-        md = params[:MD]
-        pa_response = params[:PaRes]
-
-        gateway_class = cookies.signed[:adyen_gateway_name].constantize
-        gateway = gateway_class.find(cookies.signed[:adyen_gateway_id])
+      if params[:MD].present? && params[:PaRes].present? && params[:payment_number].present?
+        crypt           = ActiveSupport::MessageEncryptor
+                            .new(Rails.application.secrets.secret_key_base)
+        payment_num     = crypt.decrypt_and_verify(params[:payment_number])
+        @payment        = Spree::Payment.find_by(number: payment_num)
+        @payment_order  = @payment.order
+        gateway         = @payment.payment_method
+        md              = params[:MD]
+        pa_response     = params[:PaRes]
 
         response3d = gateway.authorise3d(md, pa_response, request.ip, request.headers.env)
-
-        @payment = Spree::Payment.find_by_number(cookies.signed[:payment_number])
         @payment.response_code = response3d.psp_reference
-        @payment_order = @payment.order
 
         if response3d.success?
           @payment.pend
@@ -58,10 +57,7 @@ module Spree
       end
 
       # Update iframe and redirect parent to checkout state
-      render partial: 'spree/shared/reload_parent', locals: {
-        new_url: redirect_path
-      }
-
+      render partial: 'spree/shared/reload_parent', locals: { new_url: redirect_path }
     end
 
     private
