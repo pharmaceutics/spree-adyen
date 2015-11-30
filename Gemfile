@@ -6,7 +6,7 @@ gem 'spree', github: 'spree/spree', branch: branch
 gem 'coffee-rails', '~> 4.0.0'
 gem 'sass-rails', '~> 4.0.0'
 
-gem 'adyen', github: 'huoxito/adyen', branch: 'enhanced'
+gem 'adyen', github: 'surfdome/adyen', branch: '3-0-stable-sd'
 gem 'pry-rails'
 
 gem 'vcr'
