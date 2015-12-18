@@ -14,6 +14,8 @@ module Spree
 
     validates :brand_code, presence: true
 
+    scope :with_payment_profile, -> { where('gateway_customer_profile_id IS NOT NULL') }
+
     def actions
       %w{capture void credit}
     end
