@@ -56,8 +56,12 @@ module Spree
 
       end
 
-      # Update iframe and redirect parent to checkout state
-      render partial: 'spree/shared/reload_parent', locals: { new_url: redirect_path }
+      if @payment_order
+        # Update iframe and redirect parent to checkout state
+        render partial: 'spree/shared/reload_parent', locals: { new_url: redirect_path }
+      else
+        render_404
+      end
     end
 
     private
