@@ -29,5 +29,9 @@ module Spree
     def can_capture?(payment)
       payment.pending? || payment.checkout?
     end
+
+    def name
+      brand_code.to_s
+    end
   end
 end
