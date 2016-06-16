@@ -22,7 +22,7 @@ module Spree
 
     # Indicates whether its possible to void the payment.
     def can_void?(payment)
-      !payment.void?
+      false
     end
 
     # Indicates whether its possible to capture the payment
