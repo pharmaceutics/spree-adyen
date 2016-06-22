@@ -49,7 +49,7 @@ module Spree
         else
           # TODO confirm the error response will always have these two methods
           def response.to_s
-            "#{result_code} - #{refusal_reason}"
+            response
           end
         end
 
@@ -65,9 +65,8 @@ module Spree
         if response.success?
           def response.authorization; nil; end
         else
-          # TODO confirm the error response will always have these two methods
           def response.to_s
-            "#{result_code} - #{refusal_reason}"
+            response
           end
         end
         response
@@ -81,7 +80,7 @@ module Spree
           def response.authorization; nil; end
         else
           def response.to_s
-            refusal_reason
+            response
           end
         end
 
