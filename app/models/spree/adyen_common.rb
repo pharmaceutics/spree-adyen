@@ -146,8 +146,10 @@ module Spree
           end
         end
 
-        def authorize_on_card(amount, source, gateway_options, card, options = { recurring: false })
+        def authorize_on_card(amount, source, gateway_options, card, billing_address, options = { recurring: false })
           reference = gateway_options[:order_id]
+
+          billing_address = build_billing_address_hash(gateway_options[:billing_address])
 
           amount = { currency: gateway_options[:currency], value: amount }
 
@@ -162,7 +164,7 @@ module Spree
                       :ip => gateway_options[:ip],
                       :statement => "Order # #{gateway_options[:order_id]}" }
 
-          response = decide_and_authorise reference, amount, shopper, source, card, options
+          response = decide_and_authorise reference, amount, shopper, source, card, billing_address, options
 
           # Needed to make the response object talk nicely with Spree payment/processing api
           if response.success?
@@ -178,7 +180,7 @@ module Spree
           response
         end
 
-        def decide_and_authorise(reference, amount, shopper, source, card, options)
+        def decide_and_authorise(reference, amount, shopper, source, card, billing_address, options)
           recurring_detail_reference = source.gateway_customer_profile_id
           card_cvc = source.verification_value
 
@@ -191,7 +193,7 @@ module Spree
           elsif source.gateway_customer_profile_id.present?
             provider.authorise_recurring_payment reference, amount, shopper, source.gateway_customer_profile_id
           else
-            provider.authorise_payment reference, amount, shopper, card, options
+            provider.authorise_payment reference, amount, shopper, card, billing_address, options
           end
         end
 
@@ -245,6 +247,27 @@ module Spree
             last_digits: list.details.last[:card][:number],
             gateway_customer_profile_id: list.details.last[:recurring_detail_reference]
           )
+        end
+
+        # address hash contents...
+        # :name => "John Smith",
+        # :address1 => "10 Downing Street",
+        # :address2 => "",
+        # :city => "London",
+        # :state => nil,
+        # :zip => "SW1A 2AA",
+        # :country => "GB",
+        # :phone => "07748648644"
+
+        def build_billing_address_hash(address)
+          {
+            street: address[:address1],
+            house_number_or_name: nil,
+            postal_code: address[:zip],
+            city: address[:city],
+            state_or_province: address[:state],
+            country: address[:country]
+          }
         end
     end
 

@@ -35,5 +35,6 @@ module Spree
       card = { encrypted: { json: source.encrypted_data } }
       set_up_contract source, card, user, shopper_ip
     end
+
   end
 end
